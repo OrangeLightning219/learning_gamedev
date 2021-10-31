@@ -18,8 +18,8 @@ AllowShortLoopsOnASingleLine: 'true'
 AlwaysBreakAfterReturnType: None
 AlwaysBreakBeforeMultilineStrings: 'false'
 AlwaysBreakTemplateDeclarations: 'Yes'
-BinPackArguments: 'false'
-BinPackParameters: 'false'
+BinPackArguments: 'true'
+BinPackParameters: 'true'
 BreakBeforeBinaryOperators: None
 BreakBeforeBraces: Allman
 BreakBeforeTernaryOperators: 'false'
