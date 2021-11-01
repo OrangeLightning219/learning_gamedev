@@ -1,3 +1,4 @@
+#include <dsound.h>
 #include <stdint.h>
 #include <windows.h>
 #include <xinput.h>
@@ -30,6 +31,9 @@ struct Win32_Window_Dimensions
     int height;
 };
 
+#define DIRECT_SOUND_CREATE( name ) HRESULT WINAPI name( LPCGUID pcGuidDevice, LPDIRECTSOUND *ppDS, LPUNKNOWN pUnkOuter )
+typedef DIRECT_SOUND_CREATE( direct_sound_create );
+
 #define X_INPUT_GET_STATE( name ) DWORD WINAPI name( DWORD dwUserIndex, XINPUT_STATE *pState )
 #define X_INPUT_SET_STATE( name ) DWORD WINAPI name( DWORD dwUserIndex, XINPUT_VIBRATION *pVibration )
 typedef X_INPUT_GET_STATE( x_input_get_state );
@@ -37,12 +41,12 @@ typedef X_INPUT_SET_STATE( x_input_set_state );
 
 X_INPUT_GET_STATE( XInputGetStateStub )
 {
-    return 0;
+    return ERROR_DEVICE_NOT_CONNECTED;
 }
 
 X_INPUT_SET_STATE( XInputSetStateStub )
 {
-    return 0;
+    return ERROR_DEVICE_NOT_CONNECTED;
 }
 
 global_variable x_input_get_state *XInputGetState_ = XInputGetStateStub;
@@ -57,6 +61,11 @@ global_variable Win32_Offscreen_Buffer globalBackbuffer;
 internal void Win32LoadXInput()
 {
     HMODULE xInputLibrary = LoadLibrary( "xinput1_4.dll" );
+    if ( !xInputLibrary )
+    {
+        xInputLibrary = LoadLibrary( "xinput1_3.dll" );
+    }
+
     if ( xInputLibrary )
     {
         XInputGetState = ( x_input_get_state * ) GetProcAddress( xInputLibrary, "XInputGetState" );
@@ -117,12 +126,56 @@ internal void Win32ResizeDIBSection( Win32_Offscreen_Buffer *buffer, int width, 
 internal void Win32DisplayBufferInWindow( HDC deviceContext, int windowWidth, int windowHeight,
                                           Win32_Offscreen_Buffer *buffer )
 {
-    // StretchDIBits( deviceContext, x, y, width, height, x, y, width, height, bitmapMemory, &bitmapInfo, DIB_RGB_COLORS, SRCCOPY );
     StretchDIBits( deviceContext,
                    0, 0, windowWidth, windowHeight,
                    0, 0, buffer->width, buffer->height,
                    buffer->memory, &buffer->info,
                    DIB_RGB_COLORS, SRCCOPY );
+}
+
+internal void Win32InitDSound( HWND window, s32 samplesPerSec, s32 bufferSize )
+{
+    HMODULE dSoundLibrary = LoadLibrary( "dsound.dll" );
+    if ( dSoundLibrary )
+    {
+        direct_sound_create *DirectSoundCreate = ( direct_sound_create * ) GetProcAddress( dSoundLibrary, "DirectSoundCreate" );
+        LPDIRECTSOUND directSound;
+        if ( DirectSoundCreate && SUCCEEDED( DirectSoundCreate( 0, &directSound, 0 ) ) )
+        {
+            WAVEFORMATEX waveFormat = {};
+            waveFormat.wFormatTag = WAVE_FORMAT_PCM;
+            waveFormat.nChannels = 2;
+            waveFormat.nSamplesPerSec = samplesPerSec;
+            waveFormat.wBitsPerSample = 16;
+            waveFormat.nBlockAlign = ( waveFormat.nChannels * waveFormat.wBitsPerSample ) / 8;
+            waveFormat.nAvgBytesPerSec = waveFormat.nBlockAlign * waveFormat.nSamplesPerSec;
+
+            if ( SUCCEEDED( directSound->SetCooperativeLevel( window, DSSCL_PRIORITY ) ) )
+            {
+                DSBUFFERDESC bufferDescription = {};
+                bufferDescription.dwSize = sizeof( bufferDescription );
+                bufferDescription.dwFlags = DSBCAPS_PRIMARYBUFFER;
+                LPDIRECTSOUNDBUFFER primaryBuffer;
+                if ( SUCCEEDED( directSound->CreateSoundBuffer( &bufferDescription, &primaryBuffer, 0 ) ) )
+                {
+                    if ( SUCCEEDED( primaryBuffer->SetFormat( &waveFormat ) ) )
+                    {
+                        OutputDebugString( "Primary buffer format set\n" );
+                    }
+                }
+                DSBUFFERDESC secondaryBufferDescription = {};
+                secondaryBufferDescription.dwSize = sizeof( secondaryBufferDescription );
+                secondaryBufferDescription.dwFlags = 0;
+                secondaryBufferDescription.dwBufferBytes = bufferSize;
+                secondaryBufferDescription.lpwfxFormat = &waveFormat;
+                LPDIRECTSOUNDBUFFER secondaryBuffer;
+                if ( SUCCEEDED( directSound->CreateSoundBuffer( &secondaryBufferDescription, &secondaryBuffer, 0 ) ) )
+                {
+                    OutputDebugString( "Secondary buffer format set\n" );
+                }
+            }
+        }
+    }
 }
 
 LRESULT CALLBACK Win32MainWindowCallback( HWND window, UINT message, WPARAM wParam, LPARAM lParam )
@@ -158,44 +211,52 @@ LRESULT CALLBACK Win32MainWindowCallback( HWND window, UINT message, WPARAM wPar
         case WM_KEYUP:
         {
             u32 vkCode = wParam;
-            bool wasDown = ( ( 1 << 30 ) != 0 );
-            bool isDown = ( ( 1 << 31 ) == 0 );
+            bool wasDown = ( lParam & ( 1 << 30 ) ) != 0;
+            bool isDown = ( lParam & ( 1 << 31 ) ) == 0;
+            bool altWasDown = ( lParam & ( 1 << 29 ) ) != 0;
+            if ( wasDown != isDown )
+            {
+                if ( vkCode == 'W' )
+                {
+                }
+                else if ( vkCode == 'A' )
+                {
+                }
+                else if ( vkCode == 'S' )
+                {
+                }
+                else if ( vkCode == 'D' )
+                {
+                }
+                else if ( vkCode == 'Q' )
+                {
+                }
+                else if ( vkCode == 'E' )
+                {
+                }
+                else if ( vkCode == VK_UP )
+                {
+                }
+                else if ( vkCode == VK_LEFT )
+                {
+                }
+                else if ( vkCode == VK_DOWN )
+                {
+                }
+                else if ( vkCode == VK_RIGHT )
+                {
+                }
+                else if ( vkCode == VK_SPACE )
+                {
+                }
+                else if ( vkCode == VK_ESCAPE )
+                {
+                }
 
-            if ( vkCode == 'W' )
-            {
-            }
-            else if ( vkCode == 'A' )
-            {
-            }
-            else if ( vkCode == 'S' )
-            {
-            }
-            else if ( vkCode == 'D' )
-            {
-            }
-            else if ( vkCode == 'Q' )
-            {
-            }
-            else if ( vkCode == 'E' )
-            {
-            }
-            else if ( vkCode == VK_UP )
-            {
-            }
-            else if ( vkCode == VK_LEFT )
-            {
-            }
-            else if ( vkCode == VK_DOWN )
-            {
-            }
-            else if ( vkCode == VK_RIGHT )
-            {
-            }
-            else if ( vkCode == VK_SPACE )
-            {
-            }
-            else if ( vkCode == VK_ESCAPE )
-            {
+                if ( vkCode == VK_F4 && altWasDown )
+                {
+                    globalRunning = false;
+                }
             }
         }
         break;
@@ -247,6 +308,7 @@ int WinMain( HINSTANCE instance,
     HDC deviceContext = GetDC( window );
     if ( window )
     {
+        Win32InitDSound( window, 48000, sizeof( s16 ) * 48000 * 2 );
         globalRunning = true;
         int xOffset = 0;
         int yOffset = 0;
