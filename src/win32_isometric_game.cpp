@@ -1,9 +1,4 @@
-#include <dsound.h>
-#include <math.h>
 #include <stdint.h>
-#include <windows.h>
-#include <xinput.h>
-
 #define global_variable static
 #define local_persist   static
 #define internal        static
@@ -20,6 +15,14 @@ typedef uint64_t u64;
 
 typedef float float32;
 typedef double float64;
+
+#include "isometric_game.cpp"
+
+#include <windows.h>
+#include <stdio.h>
+#include <xinput.h>
+#include <dsound.h>
+#include <math.h>
 
 struct Win32_Offscreen_Buffer
 {
@@ -106,23 +109,6 @@ internal Win32_Window_Dimensions Win32GetWindowDimensions( HWND window )
     result.width = clientRect.right - clientRect.left;
     result.height = clientRect.bottom - clientRect.top;
     return result;
-}
-
-internal void RenderWeirdGradient( Win32_Offscreen_Buffer *buffer, int xOffset, int yOffset )
-{
-    u8 *row = ( u8 * ) buffer->memory;
-    for ( int y = 0; y < buffer->height; ++y )
-    {
-        u32 *pixel = ( u32 * ) row;
-        for ( int x = 0; x < buffer->width; ++x )
-        {
-            u8 red = x + y + xOffset + yOffset;
-            u8 green = y + yOffset;
-            u8 blue = x + xOffset;
-            *pixel++ = 0x00000000 | red << 16 | green << 8 | blue;
-        }
-        row += buffer->pitch;
-    }
 }
 
 internal void Win32ResizeDIBSection( Win32_Offscreen_Buffer *buffer, int width, int height )
@@ -350,6 +336,10 @@ int WinMain( HINSTANCE instance,
              LPSTR commamdLine,
              int showCode )
 {
+    LARGE_INTEGER performanceCounterFrequencyResult;
+    QueryPerformanceFrequency( &performanceCounterFrequencyResult );
+    s64 performanceCounterFrequency = performanceCounterFrequencyResult.QuadPart;
+
     Win32LoadXInput();
     WNDCLASS windowClass = {};
 
@@ -385,6 +375,11 @@ int WinMain( HINSTANCE instance,
         Win32InitDSound( window, soundOutput.samplesPerSecond, soundOutput.secondaryBufferSize );
         Win32FillSoundBuffer( &soundOutput, 0, soundOutput.latencySampleCount * soundOutput.bytesPerSample );
         globalSecondaryBuffer->Play( 0, 0, DSBPLAY_LOOPING );
+
+        LARGE_INTEGER lastCounter;
+        QueryPerformanceCounter( &lastCounter );
+
+        u64 lastCycleCount = __rdtsc();
 
         while ( globalRunning )
         {
@@ -446,7 +441,13 @@ int WinMain( HINSTANCE instance,
                 }
             }
 
-            RenderWeirdGradient( &globalBackbuffer, xOffset, yOffset );
+            Game_Offscreen_Buffer buffer = {};
+            buffer.memory = globalBackbuffer.memory;
+            buffer.width = globalBackbuffer.width;
+            buffer.height = globalBackbuffer.height;
+            buffer.pitch = globalBackbuffer.pitch;
+
+            GameUpdateAndRender( &buffer, xOffset, yOffset );
 
             DWORD writeCursor;
             DWORD playCursor;
@@ -470,6 +471,23 @@ int WinMain( HINSTANCE instance,
             Win32_Window_Dimensions dimensions = Win32GetWindowDimensions( window );
             Win32DisplayBufferInWindow( deviceContext, dimensions.width, dimensions.height,
                                         &globalBackbuffer );
+
+            LARGE_INTEGER endCounter;
+            QueryPerformanceCounter( &endCounter );
+
+            u64 endCycleCount = __rdtsc();
+
+            u64 cyclesElapsed = endCycleCount - lastCycleCount;
+            s64 counterElapsed = endCounter.QuadPart - lastCounter.QuadPart;
+            float32 msPerFrame = ( float32 ) ( ( 1000.0f * ( float32 ) counterElapsed ) / ( float32 ) performanceCounterFrequency );
+            float32 fps = 1000.0f / msPerFrame;
+            float32 megaCyclesPerFrame = ( float32 ) ( ( float32 ) cyclesElapsed / 1000000.0f );
+            // char buffer[ 256 ];
+            // sprintf( buffer, "%f ms/frame - FPS: %f - mega cycles: %f\n", msPerFrame, fps, megaCyclesPerFrame );
+            // OutputDebugString( buffer );
+
+            lastCounter = endCounter;
+            lastCycleCount = endCycleCount;
         }
     }
     return 0;

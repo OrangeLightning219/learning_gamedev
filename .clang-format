@@ -45,8 +45,8 @@ MaxEmptyLinesToKeep: '1'
 NamespaceIndentation: All
 PointerAlignment: Right
 ReflowComments: 'false'
-SortIncludes: 'true'
-SortUsingDeclarations: 'true'
+SortIncludes: 'false'
+SortUsingDeclarations: 'false'
 SpaceAfterCStyleCast: 'true'
 SpaceAfterLogicalNot: 'false'
 SpaceAfterTemplateKeyword: 'false'
