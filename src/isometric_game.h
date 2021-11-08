@@ -3,8 +3,6 @@
 
 #include "utils.h"
 
-#define ArrayCount( array ) ( sizeof( array ) / sizeof( ( array )[ 0 ] ) )
-
 struct Game_Sound_Output_Buffer
 {
     int samplesPerSecond;
@@ -68,9 +66,39 @@ struct Game_Input
 {
     Game_Controller_Input controllers[ 4 ];
 };
+
+struct Game_Memory
+{
+    bool isInitialized;
+    u64 permanentStorageSize;
+    void *permanentStorage;
+    u64 transientStorageSize;
+    void *transientStorage;
+};
+
 // services for the platform layer
-internal void GameUpdateAndRender( Game_Input *input, Game_Offscreen_Buffer *buffer, Game_Sound_Output_Buffer *soundBuffer );
+internal void GameUpdateAndRender( Game_Memory *memory, Game_Input *input,
+                                   Game_Offscreen_Buffer *buffer, Game_Sound_Output_Buffer *soundBuffer );
 
 // services from the platform layer
+#if INTERNAL
+struct Debug_Read_File_Result
+{
+    u32 contentSize;
+    void *content;
+};
+internal Debug_Read_File_Result DebugPlatformReadEntireFile( char *filename );
+internal void DebugPlatformFreeFileMemory( void *fileMemory );
+
+internal bool DebugPlatformWriteEntireFile( char *filename, u32 memorySize, void *memory );
+#endif
+
+// -------------------------------------
+struct Game_State
+{
+    int xOffset;
+    int yOffset;
+    int toneHz;
+};
 
 #endif

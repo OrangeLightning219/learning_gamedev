@@ -19,4 +19,27 @@ typedef uint64_t u64;
 typedef float float32;
 typedef double float64;
 
+#if SLOW
+    #define Assert( expression )    \
+        if ( !( expression ) )      \
+        {                           \
+            int *volatile null = 0; \
+            *null = 0;              \
+        }
+#else
+    #define Assert( expression )
+#endif
+
+#define Kilobytes( value ) ( ( value ) *1024LL )
+#define Megabytes( value ) ( Kilobytes( value ) * 1024LL )
+#define Gigabytes( value ) ( Megabytes( value ) * 1024LL )
+#define Terabytes( value ) ( Gigabytes( value ) * 1024LL )
+
+#define ArrayCount( array ) ( sizeof( array ) / sizeof( ( array )[ 0 ] ) )
+
+inline u32 SafeTruncateU64( u64 value )
+{
+    Assert( value <= 0xFFFFFFFF );
+    return ( u32 ) value;
+}
 #endif

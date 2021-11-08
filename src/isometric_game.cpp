@@ -34,17 +34,32 @@ internal void RenderWeirdGradient( Game_Offscreen_Buffer *buffer, int xOffset, i
     }
 }
 
-internal void GameUpdateAndRender( Game_Input *input, Game_Offscreen_Buffer *buffer, Game_Sound_Output_Buffer *soundBuffer )
+internal void GameUpdateAndRender( Game_Memory *memory, Game_Input *input,
+                                   Game_Offscreen_Buffer *buffer, Game_Sound_Output_Buffer *soundBuffer )
 {
-    local_persist int toneHz = 256;
-    local_persist int xOffset = 0;
-    local_persist int yOffset = 0;
+    Assert( sizeof( Game_State ) <= memory->permanentStorageSize );
+    Game_State *gameState = ( Game_State * ) memory->permanentStorage;
+
+    if ( !memory->isInitialized )
+    {
+        gameState->toneHz = 256;
+
+        char *filename = __FILE__;
+        Debug_Read_File_Result file = DebugPlatformReadEntireFile( filename );
+        if ( file.content )
+        {
+            DebugPlatformWriteEntireFile( "test.out", file.contentSize, file.content );
+            DebugPlatformFreeFileMemory( file.content );
+        }
+
+        memory->isInitialized = true;
+    }
 
     Game_Controller_Input *input0 = &input->controllers[ 0 ];
     if ( input0->isAnalog )
     {
-        toneHz = 256 + ( int ) ( 128.0f * input0->leftStickEndY );
-        xOffset -= ( int ) ( 4.0f * input0->leftStickEndX );
+        gameState->toneHz = 256 + ( int ) ( 128.0f * input0->leftStickEndY );
+        gameState->xOffset -= ( int ) ( 4.0f * input0->leftStickEndX );
     }
     else
     {
@@ -52,9 +67,9 @@ internal void GameUpdateAndRender( Game_Input *input, Game_Offscreen_Buffer *buf
 
     if ( input0->a.endedDown )
     {
-        yOffset += 1;
+        gameState->yOffset += 1;
     }
 
-    GameOutputSound( soundBuffer, toneHz );
-    RenderWeirdGradient( buffer, xOffset, yOffset );
+    GameOutputSound( soundBuffer, gameState->toneHz );
+    RenderWeirdGradient( buffer, gameState->xOffset, gameState->yOffset );
 }
