@@ -1,6 +1,5 @@
 #ifndef ISOMETRIC_GAME_H
 #define ISOMETRIC_GAME_H
-
 #include "utils.h"
 
 struct Game_Sound_Output_Buffer

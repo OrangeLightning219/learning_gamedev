@@ -2,3 +2,9 @@
 -std=c++20
 -DINTERNAL=1
 -DSLOW=1
+-W
+-Wall
+-Wno-undefined-internal
+-Wno-writable-strings
+-Wno-unused
+-Wno-unused-parameter

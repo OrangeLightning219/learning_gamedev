@@ -25,9 +25,9 @@ internal void RenderWeirdGradient( Game_Offscreen_Buffer *buffer, int xOffset, i
         u32 *pixel = ( u32 * ) row;
         for ( int x = 0; x < buffer->width; ++x )
         {
-            u8 red = x + y + xOffset + yOffset;
-            u8 green = y + yOffset;
-            u8 blue = x + xOffset;
+            u8 red = ( u8 ) ( x + y + xOffset + yOffset );
+            u8 green = ( u8 ) ( y + yOffset );
+            u8 blue = ( u8 ) ( x + xOffset );
             *pixel++ = 0 | red << 16 | green << 8 | blue;
         }
         row += buffer->pitch;
