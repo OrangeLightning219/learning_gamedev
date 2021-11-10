@@ -26,17 +26,12 @@ struct Game_Button_State
 struct Game_Controller_Input
 {
     bool isAnalog;
+    bool isConnected;
 
-    float32 minStickX, maxStickX;
-    float32 minStickY, maxStickY;
-    float32 leftStickStartX, rightStickStartX;
-    float32 leftStickStartY, rightStickStartY;
-    float32 leftStickEndX, rightStickEndX;
-    float32 leftStickEndY, rightStickEndY;
-
-    float32 minTrigger, maxTrigger;
-    float32 leftTriggerStart, leftTriggerEnd;
-    float32 rightTriggerStart, rightTriggerEnd;
+    float32 leftStickAverageX, leftStickAverageY;
+    float32 rightStickAverageX, rightStickAverageY;
+    float32 leftTriggerAverage;
+    float32 rightTriggerAverage;
 
     union
     {
@@ -63,8 +58,14 @@ struct Game_Controller_Input
 
 struct Game_Input
 {
-    Game_Controller_Input controllers[ 4 ];
+    Game_Controller_Input controllers[ 5 ];
 };
+
+inline Game_Controller_Input *getController( Game_Input *input, int controllerIndex )
+{
+    Assert( controllerIndex < ( int ) ArrayCount( input->controllers ) );
+    return &input->controllers[ controllerIndex ];
+}
 
 struct Game_Memory
 {

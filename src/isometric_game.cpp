@@ -54,22 +54,31 @@ internal void GameUpdateAndRender( Game_Memory *memory, Game_Input *input,
 
         memory->isInitialized = true;
     }
-
-    Game_Controller_Input *input0 = &input->controllers[ 0 ];
-    if ( input0->isAnalog )
+    for ( int controllerIndex = 0; controllerIndex < ( int ) ArrayCount( input->controllers ); ++controllerIndex )
     {
-        gameState->toneHz = 256 + ( int ) ( 128.0f * input0->leftStickEndY );
-        gameState->xOffset -= ( int ) ( 4.0f * input0->leftStickEndX );
-    }
-    else
-    {
-    }
+        Game_Controller_Input *controller = getController( input, controllerIndex );
+        if ( controller->isAnalog )
+        {
+            gameState->toneHz = 256 + ( int ) ( 128.0f * controller->leftStickAverageY );
+            gameState->xOffset -= ( int ) ( 4.0f * controller->leftStickAverageX );
+        }
+        else
+        {
+            if ( controller->left.endedDown )
+            {
+                gameState->xOffset += 1;
+            }
+            else if ( controller->right.endedDown )
+            {
+                gameState->xOffset -= 1;
+            }
+        }
 
-    if ( input0->a.endedDown )
-    {
-        gameState->yOffset += 1;
+        if ( controller->a.endedDown )
+        {
+            gameState->yOffset += 1;
+        }
     }
-
     GameOutputSound( soundBuffer, gameState->toneHz );
     RenderWeirdGradient( buffer, gameState->xOffset, gameState->yOffset );
 }
