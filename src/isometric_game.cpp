@@ -1,5 +1,7 @@
 #include "isometric_game.h"
-#include <math.h>
+#ifndef UNITY_BUILD
+    #include <math.h>
+#endif
 
 internal void GameOutputSound( Game_Sound_Output_Buffer *buffer, int toneHz )
 {
@@ -11,6 +13,10 @@ internal void GameOutputSound( Game_Sound_Output_Buffer *buffer, int toneHz )
     for ( int sampleIndex = 0; sampleIndex < buffer->sampleCount; ++sampleIndex )
     {
         tSine += 2 * pi32 / ( float32 ) wavePeriod;
+        if ( tSine > 2 * pi32 )
+        {
+            tSine -= 2 * pi32;
+        }
         float32 sineValue = sinf( tSine );
         s16 sampleValue = ( s16 ) ( sineValue * toneVolume );
         *sampleOut++ = sampleValue;
@@ -28,14 +34,14 @@ internal void RenderWeirdGradient( Game_Offscreen_Buffer *buffer, int xOffset, i
             u8 red = ( u8 ) ( x + y + xOffset + yOffset );
             u8 green = ( u8 ) ( y + yOffset );
             u8 blue = ( u8 ) ( x + xOffset );
-            *pixel++ = 0 | red << 16 | green << 8 | blue;
+            // *pixel++ = 0 | red << 16 | green << 8 | blue;
+            *pixel++ = 0;
         }
         row += buffer->pitch;
     }
 }
 
-internal void GameUpdateAndRender( Game_Memory *memory, Game_Input *input,
-                                   Game_Offscreen_Buffer *buffer, Game_Sound_Output_Buffer *soundBuffer )
+internal void GameUpdateAndRender( Game_Memory *memory, Game_Input *input, Game_Offscreen_Buffer *buffer )
 {
     Assert( sizeof( Game_State ) <= memory->permanentStorageSize );
     Game_State *gameState = ( Game_State * ) memory->permanentStorage;
@@ -54,7 +60,7 @@ internal void GameUpdateAndRender( Game_Memory *memory, Game_Input *input,
 
         memory->isInitialized = true;
     }
-    for ( int controllerIndex = 0; controllerIndex < ( int ) ArrayCount( input->controllers ); ++controllerIndex )
+    for ( int controllerIndex = 0; controllerIndex < ArrayCount( input->controllers ); ++controllerIndex )
     {
         Game_Controller_Input *controller = getController( input, controllerIndex );
         if ( controller->isAnalog )
@@ -79,6 +85,11 @@ internal void GameUpdateAndRender( Game_Memory *memory, Game_Input *input,
             gameState->yOffset += 1;
         }
     }
-    GameOutputSound( soundBuffer, gameState->toneHz );
     RenderWeirdGradient( buffer, gameState->xOffset, gameState->yOffset );
+}
+
+internal void GameGetSoundSamples( Game_Memory *memory, Game_Sound_Output_Buffer *soundBuffer )
+{
+    Game_State *gameState = ( Game_State * ) memory->permanentStorage;
+    GameOutputSound( soundBuffer, gameState->toneHz );
 }

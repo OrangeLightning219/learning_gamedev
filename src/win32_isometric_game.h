@@ -1,7 +1,10 @@
 #ifndef WIN32_ISOMETRIC_GAME_H
 #define WIN32_ISOMETRIC_GAME_H
-#include "utils.h"
-#include <windows.h>
+
+#ifndef UNITY_BUILD
+    #include "utils.h"
+    #include <windows.h>
+#endif
 
 struct Win32_Offscreen_Buffer
 {
@@ -10,6 +13,7 @@ struct Win32_Offscreen_Buffer
     int width;
     int height;
     int pitch;
+    int bytesPerPixel;
 };
 
 struct Win32_Window_Dimensions
@@ -23,8 +27,19 @@ struct Win32_Sound_Output
     int samplesPerSecond;
     int bytesPerSample;
     u32 runningsampleIndex;
-    int secondaryBufferSize;
+    DWORD secondaryBufferSize;
     int latencySampleCount;
+    int safetyBytes;
 };
 
+struct Win32_Debug_Sound_Marker
+{
+    DWORD outputPlayCursor;
+    DWORD outputWriteCursor;
+    DWORD outputLocation;
+    DWORD outputByteCount;
+    DWORD expectedFlipPlayCursor;
+    DWORD flipPlayCursor;
+    DWORD flipWriteCursor;
+};
 #endif

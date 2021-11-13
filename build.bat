@@ -10,7 +10,7 @@ set compiler_args=^
 -EHa- ^
 -Od -Oi ^
 -WX -W4 ^
--DSLOW=1 -DINTERNAL=1 ^
+-DSLOW -DINTERNAL -DUNITY_BUILD ^
 -FC ^
 -Zi ^
 -Wno-writable-strings ^
@@ -18,7 +18,7 @@ set compiler_args=^
 -Wno-unused-parameter ^
 -Wno-unused-variable ^
 ../src/win32_isometric_game.cpp ^
-user32.lib gdi32.lib
+user32.lib gdi32.lib winmm.lib
 
 pushd build
 

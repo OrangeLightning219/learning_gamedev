@@ -35,7 +35,7 @@ typedef double float64;
 #define Gigabytes( value ) ( Megabytes( value ) * 1024LL )
 #define Terabytes( value ) ( Gigabytes( value ) * 1024LL )
 
-#define ArrayCount( array ) ( sizeof( array ) / sizeof( ( array )[ 0 ] ) )
+#define ArrayCount( array ) ( ( int ) ( sizeof( array ) / sizeof( ( array )[ 0 ] ) ) )
 
 inline u32 SafeTruncateU64( u64 value )
 {

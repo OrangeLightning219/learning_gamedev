@@ -1,0 +1,8 @@
+#ifndef {{MACRO_GUARD}}
+#define {{MACRO_GUARD}}
+
+#ifndef UNITY_BUILD
+    #include "utils.h"
+#endif
+
+#endif /* {{MACRO_GUARD}} */

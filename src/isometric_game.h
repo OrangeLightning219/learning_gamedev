@@ -1,6 +1,8 @@
 #ifndef ISOMETRIC_GAME_H
 #define ISOMETRIC_GAME_H
-#include "utils.h"
+#ifndef UNITY_BUILD
+    #include "utils.h"
+#endif
 
 struct Game_Sound_Output_Buffer
 {
@@ -77,11 +79,11 @@ struct Game_Memory
 };
 
 // services for the platform layer
-internal void GameUpdateAndRender( Game_Memory *memory, Game_Input *input,
-                                   Game_Offscreen_Buffer *buffer, Game_Sound_Output_Buffer *soundBuffer );
+internal void GameUpdateAndRender( Game_Memory *memory, Game_Input *input, Game_Offscreen_Buffer *buffer );
+internal void GameGetSoundSamples( Game_Memory *memory, Game_Sound_Output_Buffer *soundBuffer );
 
 // services from the platform layer
-#if INTERNAL
+#ifdef INTERNAL
 struct Debug_Read_File_Result
 {
     u32 contentSize;
