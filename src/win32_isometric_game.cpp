@@ -1,9 +1,3 @@
-#include "utils.h"
-#include "isometric_game.h"
-#include <math.h>
-#include "isometric_game.cpp"
-
-#include <windows.h>
 #include "win32_isometric_game.h"
 #include <malloc.h>
 #include <stdio.h>
@@ -41,7 +35,15 @@ global_variable LPDIRECTSOUNDBUFFER globalSecondaryBuffer;
 
 global_variable s64 globalPerformanceCounterFrequency;
 
-internal Debug_Read_File_Result DebugPlatformReadEntireFile( char *filename )
+DEBUG_PLATFORM_FREE_FILE_MEMORY( DebugPlatformFreeFileMemory )
+{
+    if ( fileMemory )
+    {
+        VirtualFree( fileMemory, 0, MEM_RELEASE );
+    }
+}
+
+DEBUG_PLATFORM_READ_ENTIRE_FILE( DebugPlatformReadEntireFile )
 {
     Debug_Read_File_Result result = {};
     HANDLE fileHandle = CreateFile( filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0 );
@@ -84,15 +86,7 @@ internal Debug_Read_File_Result DebugPlatformReadEntireFile( char *filename )
     return result;
 }
 
-internal void DebugPlatformFreeFileMemory( void *fileMemory )
-{
-    if ( fileMemory )
-    {
-        VirtualFree( fileMemory, 0, MEM_RELEASE );
-    }
-}
-
-internal bool DebugPlatformWriteEntireFile( char *filename, u32 memorySize, void *memory )
+DEBUG_PLATFORM_WRITE_ENTIRE_FILE( DebugPlatformWriteEntireFile )
 {
     bool result = false;
     HANDLE fileHandle = CreateFile( filename, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0 );
@@ -115,6 +109,50 @@ internal bool DebugPlatformWriteEntireFile( char *filename, u32 memorySize, void
         //@TODO: Logging
     }
     return result;
+}
+
+inline FILETIME Win32GetLastWriteTime( char *filename )
+{
+    WIN32_FIND_DATA findData = {};
+    HANDLE findHandle = FindFirstFile( filename, &findData );
+    if ( findHandle != INVALID_HANDLE_VALUE )
+    {
+        FindClose( findHandle );
+        return findData.ftLastWriteTime;
+    }
+    return {};
+}
+
+internal Win32_Game_Code Win32LoadGameCode( char *sourceDLLName, char *tempDllName )
+{
+    CopyFile( sourceDLLName, tempDllName, FALSE );
+    Win32_Game_Code gameCode = {};
+    gameCode.dllLastWriteTime = Win32GetLastWriteTime( sourceDLLName );
+    gameCode.gameCodeDLL = LoadLibrary( tempDllName );
+    if ( gameCode.gameCodeDLL )
+    {
+        gameCode.GetSoundSamples = ( game_get_sound_samples * ) GetProcAddress( gameCode.gameCodeDLL, "GameGetSoundSamples" );
+        gameCode.UpdateAndRender = ( game_update_and_render * ) GetProcAddress( gameCode.gameCodeDLL, "GameUpdateAndRender" );
+        gameCode.isValid = gameCode.GetSoundSamples && gameCode.UpdateAndRender;
+    }
+    if ( !gameCode.isValid )
+    {
+        gameCode.GetSoundSamples = GameGetSoundSamplesStub;
+        gameCode.UpdateAndRender = GameUpdateAndRenderStub;
+    }
+    return gameCode;
+}
+
+internal void Win32UnloadGameCode( Win32_Game_Code gameCode )
+{
+    if ( gameCode.gameCodeDLL )
+    {
+        FreeLibrary( gameCode.gameCodeDLL );
+        gameCode.gameCodeDLL = 0;
+    }
+    gameCode.isValid = false;
+    gameCode.GetSoundSamples = GameGetSoundSamplesStub;
+    gameCode.UpdateAndRender = GameUpdateAndRenderStub;
 }
 
 internal void Win32LoadXInput()
@@ -532,11 +570,47 @@ inline float32 Win32GetSecondsElapsed( LARGE_INTEGER start, LARGE_INTEGER end )
     return ( float32 ) ( end.QuadPart - start.QuadPart ) / ( float32 ) globalPerformanceCounterFrequency;
 }
 
+internal void ConcatenateStrings( char *sourceA, int countA, char *sourceB, int countB,
+                                  char *destination, int destinationCount )
+{
+    for ( int index = 0; index < countA; ++index )
+    {
+        *destination++ = *sourceA++;
+    }
+    for ( int index = 0; index < countB; ++index )
+    {
+        *destination++ = *sourceB++;
+    }
+    *destination++ = '\0';
+}
+
 int WinMain( HINSTANCE instance,
              HINSTANCE prevInstance,
              LPSTR commamdLine,
              int showCode )
 {
+    char pathBuffer[ MAX_PATH ];
+    DWORD filenameSize = GetModuleFileName( 0, pathBuffer, sizeof( pathBuffer ) );
+    char *lastSlash = pathBuffer;
+    for ( char *scan = pathBuffer; *scan; ++scan )
+    {
+        if ( *scan == '\\' )
+        {
+            lastSlash = scan + 1;
+        }
+    }
+
+    char sourceGameCodeDLLFilename[] = "isometric_game.dll";
+    char sourceGameCodeDLLFullPath[ MAX_PATH ];
+    char tempGameCodeDLLFilename[] = "isometric_game_temp.dll";
+    char tempGameCodeDLLFullPath[ MAX_PATH ];
+    ConcatenateStrings( pathBuffer, lastSlash - pathBuffer,
+                        sourceGameCodeDLLFilename, sizeof( sourceGameCodeDLLFilename ) - 1,
+                        sourceGameCodeDLLFullPath, sizeof( sourceGameCodeDLLFullPath ) );
+
+    ConcatenateStrings( pathBuffer, lastSlash - pathBuffer,
+                        tempGameCodeDLLFilename, sizeof( tempGameCodeDLLFilename ) - 1,
+                        tempGameCodeDLLFullPath, sizeof( tempGameCodeDLLFullPath ) );
     LARGE_INTEGER globalPerformanceCounterFrequencyResult;
     QueryPerformanceFrequency( &globalPerformanceCounterFrequencyResult );
     globalPerformanceCounterFrequency = globalPerformanceCounterFrequencyResult.QuadPart;
@@ -590,8 +664,13 @@ int WinMain( HINSTANCE instance,
         gameMemory.transientStorageSize = Gigabytes( 1 );
         u64 totalSize = gameMemory.permanentStorageSize + gameMemory.transientStorageSize;
         gameMemory.permanentStorage = VirtualAlloc( baseAddress, totalSize, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE );
-
         gameMemory.transientStorage = ( u8 * ) gameMemory.permanentStorage + gameMemory.permanentStorageSize;
+#ifdef INTERNAL
+        gameMemory.DebugPlatformFreeFileMemory = DebugPlatformFreeFileMemory;
+        gameMemory.DebugPlatformReadEntireFile = DebugPlatformReadEntireFile;
+        gameMemory.DebugPlatformWriteEntireFile = DebugPlatformWriteEntireFile;
+#endif
+
         if ( samples && gameMemory.permanentStorage && gameMemory.transientStorage )
         {
             int debugTimeMarkerIndex = 0;
@@ -608,8 +687,18 @@ int WinMain( HINSTANCE instance,
             Game_Input input[ 2 ] = {};
             Game_Input *newInput = &input[ 0 ];
             Game_Input *oldInput = &input[ 1 ];
+
+            Win32_Game_Code game = Win32LoadGameCode( sourceGameCodeDLLFullPath, tempGameCodeDLLFullPath );
             while ( globalRunning )
             {
+#ifdef INTERNAL
+                FILETIME newDLLWtiteTime = Win32GetLastWriteTime( sourceGameCodeDLLFullPath );
+                if ( CompareFileTime( &newDLLWtiteTime, &game.dllLastWriteTime ) != 0 )
+                {
+                    Win32UnloadGameCode( game );
+                    game = Win32LoadGameCode( sourceGameCodeDLLFullPath, tempGameCodeDLLFullPath );
+                }
+#endif
                 Game_Controller_Input *oldKeyboardController = getController( oldInput, 0 );
                 Game_Controller_Input *newKeyboardController = getController( newInput, 0 );
                 *newKeyboardController = {};
@@ -722,7 +811,7 @@ int WinMain( HINSTANCE instance,
                 buffer.height = globalBackbuffer.height;
                 buffer.pitch = globalBackbuffer.pitch;
 
-                GameUpdateAndRender( &gameMemory, newInput, &buffer );
+                game.UpdateAndRender( &gameMemory, newInput, &buffer );
 
                 LARGE_INTEGER audioWallClock = Win32GetWallClock();
                 float32 fromBeginToAudioSeconds = Win32GetSecondsElapsed( flipWallClock, audioWallClock );
@@ -778,7 +867,7 @@ int WinMain( HINSTANCE instance,
                     soundBuffer.samplesPerSecond = soundOutput.samplesPerSecond;
                     soundBuffer.sampleCount = bytesToWrite / soundOutput.bytesPerSample;
                     soundBuffer.samples = samples;
-                    GameGetSoundSamples( &gameMemory, &soundBuffer );
+                    game.GetSoundSamples( &gameMemory, &soundBuffer );
 #ifdef INTERNAL
                     Win32_Debug_Sound_Marker *marker = &debugTimeMarkers[ debugTimeMarkerIndex ];
                     marker->outputPlayCursor = playCursor;

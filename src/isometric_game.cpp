@@ -1,29 +1,27 @@
 #include "isometric_game.h"
 #ifndef UNITY_BUILD
-    #include <math.h>
 #endif
 
-internal void GameOutputSound( Game_Sound_Output_Buffer *buffer, int toneHz )
+void GameOutputSound( Game_Sound_Output_Buffer *buffer, Game_State *gameState )
 {
-    local_persist float32 tSine = 0;
     s16 toneVolume = 1000;
-    int wavePeriod = buffer->samplesPerSecond / toneHz;
+    int wavePeriod = buffer->samplesPerSecond / gameState->toneHz;
 
     s16 *sampleOut = buffer->samples;
     for ( int sampleIndex = 0; sampleIndex < buffer->sampleCount; ++sampleIndex )
     {
-        tSine += 2 * pi32 / ( float32 ) wavePeriod;
-        if ( tSine > 2 * pi32 )
+        gameState->tSine += 2 * pi32 / ( float32 ) wavePeriod;
+        if ( gameState->tSine > 2 * pi32 )
         {
-            tSine -= 2 * pi32;
+            gameState->tSine -= 2 * pi32;
         }
-        float32 sineValue = sinf( tSine );
+        float32 sineValue = sinf( gameState->tSine );
         s16 sampleValue = ( s16 ) ( sineValue * toneVolume );
         *sampleOut++ = sampleValue;
         *sampleOut++ = sampleValue;
     }
 }
-internal void RenderWeirdGradient( Game_Offscreen_Buffer *buffer, int xOffset, int yOffset )
+void RenderWeirdGradient( Game_Offscreen_Buffer *buffer, int xOffset, int yOffset )
 {
     u8 *row = ( u8 * ) buffer->memory;
     for ( int y = 0; y < buffer->height; ++y )
@@ -33,15 +31,15 @@ internal void RenderWeirdGradient( Game_Offscreen_Buffer *buffer, int xOffset, i
         {
             u8 red = ( u8 ) ( x + y + xOffset + yOffset );
             u8 green = ( u8 ) ( y + yOffset );
-            u8 blue = ( u8 ) ( x + xOffset );
-            // *pixel++ = 0 | red << 16 | green << 8 | blue;
-            *pixel++ = 0;
+            u8 blue = ( u8 ) ( y + xOffset );
+            *pixel++ = 0 | red << 16 | green << 8 | blue;
         }
         row += buffer->pitch;
     }
 }
 
-internal void GameUpdateAndRender( Game_Memory *memory, Game_Input *input, Game_Offscreen_Buffer *buffer )
+extern "C" __declspec( dllexport )
+GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 {
     Assert( sizeof( Game_State ) <= memory->permanentStorageSize );
     Game_State *gameState = ( Game_State * ) memory->permanentStorage;
@@ -49,13 +47,14 @@ internal void GameUpdateAndRender( Game_Memory *memory, Game_Input *input, Game_
     if ( !memory->isInitialized )
     {
         gameState->toneHz = 256;
+        gameState->tSine = 0.0f;
 
         char *filename = __FILE__;
-        Debug_Read_File_Result file = DebugPlatformReadEntireFile( filename );
+        Debug_Read_File_Result file = memory->DebugPlatformReadEntireFile( filename );
         if ( file.content )
         {
-            DebugPlatformWriteEntireFile( "test.out", file.contentSize, file.content );
-            DebugPlatformFreeFileMemory( file.content );
+            memory->DebugPlatformWriteEntireFile( "test.out", file.contentSize, file.content );
+            memory->DebugPlatformFreeFileMemory( file.content );
         }
 
         memory->isInitialized = true;
@@ -88,8 +87,9 @@ internal void GameUpdateAndRender( Game_Memory *memory, Game_Input *input, Game_
     RenderWeirdGradient( buffer, gameState->xOffset, gameState->yOffset );
 }
 
-internal void GameGetSoundSamples( Game_Memory *memory, Game_Sound_Output_Buffer *soundBuffer )
+extern "C" __declspec( dllexport )
+GAME_GET_SOUND_SAMPLES( GameGetSoundSamples )
 {
     Game_State *gameState = ( Game_State * ) memory->permanentStorage;
-    GameOutputSound( soundBuffer, gameState->toneHz );
+    GameOutputSound( soundBuffer, gameState );
 }

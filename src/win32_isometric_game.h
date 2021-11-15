@@ -2,9 +2,10 @@
 #define WIN32_ISOMETRIC_GAME_H
 
 #ifndef UNITY_BUILD
-    #include "utils.h"
-    #include <windows.h>
 #endif
+
+#include "isometric_game.h"
+#include <windows.h>
 
 struct Win32_Offscreen_Buffer
 {
@@ -42,4 +43,14 @@ struct Win32_Debug_Sound_Marker
     DWORD flipPlayCursor;
     DWORD flipWriteCursor;
 };
+
+struct Win32_Game_Code
+{
+    HMODULE gameCodeDLL;
+    FILETIME dllLastWriteTime;
+    game_update_and_render *UpdateAndRender;
+    game_get_sound_samples *GetSoundSamples;
+    bool isValid;
+};
+
 #endif
