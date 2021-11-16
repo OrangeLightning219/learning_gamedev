@@ -2,7 +2,7 @@
 #ifndef UNITY_BUILD
 #endif
 
-void GameOutputSound( Game_Sound_Output_Buffer *buffer, Game_State *gameState )
+internal void GameOutputSound( Game_Sound_Output_Buffer *buffer, Game_State *gameState )
 {
     s16 toneVolume = 1000;
     int wavePeriod = buffer->samplesPerSecond / gameState->toneHz;
@@ -16,12 +16,13 @@ void GameOutputSound( Game_Sound_Output_Buffer *buffer, Game_State *gameState )
             gameState->tSine -= 2 * pi32;
         }
         float32 sineValue = sinf( gameState->tSine );
-        s16 sampleValue = ( s16 ) ( sineValue * toneVolume );
+        s16 sampleValue = 0;
+        // s16 sampleValue = ( s16 ) ( sineValue * toneVolume );
         *sampleOut++ = sampleValue;
         *sampleOut++ = sampleValue;
     }
 }
-void RenderWeirdGradient( Game_Offscreen_Buffer *buffer, int xOffset, int yOffset )
+internal void RenderWeirdGradient( Game_Offscreen_Buffer *buffer, int xOffset, int yOffset )
 {
     u8 *row = ( u8 * ) buffer->memory;
     for ( int y = 0; y < buffer->height; ++y )
@@ -38,6 +39,25 @@ void RenderWeirdGradient( Game_Offscreen_Buffer *buffer, int xOffset, int yOffse
     }
 }
 
+internal void RenderPlayer( Game_Offscreen_Buffer *buffer, Game_State *gameState )
+{
+    for ( int x = gameState->playerX; x < gameState->playerX + 50; ++x )
+    {
+        if ( x >= 0 && x < buffer->width )
+        {
+            u8 *pixel = ( u8 * ) buffer->memory + x * buffer->bytesPerPixel + gameState->playerY * buffer->pitch;
+            for ( int y = gameState->playerY; y < gameState->playerY + 50; ++y )
+            {
+                if ( y >= 0 && y < buffer->height )
+                {
+                    *( u32 * ) pixel = 0x0000FF00;
+                    pixel += buffer->pitch;
+                }
+            }
+        }
+    }
+}
+
 extern "C" __declspec( dllexport )
 GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 {
@@ -49,6 +69,8 @@ GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
         gameState->toneHz = 256;
         gameState->tSine = 0.0f;
 
+        gameState->playerX = 100;
+        gameState->playerY = 100;
         char *filename = __FILE__;
         Debug_Read_File_Result file = memory->DebugPlatformReadEntireFile( filename );
         if ( file.content )
@@ -65,26 +87,33 @@ GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
         if ( controller->isAnalog )
         {
             gameState->toneHz = 256 + ( int ) ( 128.0f * controller->leftStickAverageY );
-            gameState->xOffset -= ( int ) ( 4.0f * controller->leftStickAverageX );
+            // gameState->xOffset -= ( int ) ( 4.0f * controller->leftStickAverageX );
         }
         else
         {
-            if ( controller->left.endedDown )
-            {
-                gameState->xOffset += 1;
-            }
-            else if ( controller->right.endedDown )
-            {
-                gameState->xOffset -= 1;
-            }
+            // if ( controller->left.endedDown )
+            // {
+            //     gameState->xOffset += 1;
+            // }
+            // else if ( controller->right.endedDown )
+            // {
+            //     gameState->xOffset -= 1;
+            // }
         }
 
+        gameState->playerX += ( int ) ( 4.0f * controller->leftStickAverageX );
+        gameState->playerY -= ( int ) ( 4.0f * controller->leftStickAverageY );
         if ( controller->a.endedDown )
         {
-            gameState->yOffset += 1;
+            gameState->playerY -= 50;
         }
+        if ( gameState->playerY < 0 ) { gameState->playerY = 0; }
+        if ( gameState->playerY + 50 >= buffer->height ) { gameState->playerY = buffer->height - 1 - 50; }
+        if ( gameState->playerX < 0 ) { gameState->playerX = 0; }
+        if ( gameState->playerX + 50 >= buffer->width ) { gameState->playerX = buffer->width - 1 - 50; }
     }
     RenderWeirdGradient( buffer, gameState->xOffset, gameState->yOffset );
+    RenderPlayer( buffer, gameState );
 }
 
 extern "C" __declspec( dllexport )
