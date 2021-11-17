@@ -29,7 +29,6 @@ struct Win32_Sound_Output
     int bytesPerSample;
     u32 runningsampleIndex;
     DWORD secondaryBufferSize;
-    int latencySampleCount;
     int safetyBytes;
 };
 
@@ -52,10 +51,24 @@ struct Win32_Game_Code
     game_get_sound_samples *GetSoundSamples;
     bool isValid;
 };
+
+struct Win32_Replay_Buffer
+{
+    HANDLE memoryMap;
+    HANDLE fileHandle;
+    char filename[ MAX_PATH ];
+    void *memoryBlock;
+};
+
 struct Win32_State
 {
+    char exePath[ MAX_PATH ];
+    char *exeFilename;
+
     u64 totalSize;
     void *gameMemoryBlock;
+    Win32_Replay_Buffer replayBuffers[ 4 ];
+
     HANDLE recordingHandle;
     int inputRecordingIndex;
 

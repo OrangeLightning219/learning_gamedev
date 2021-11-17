@@ -16,8 +16,8 @@ internal void GameOutputSound( Game_Sound_Output_Buffer *buffer, Game_State *gam
             gameState->tSine -= 2 * pi32;
         }
         float32 sineValue = sinf( gameState->tSine );
-        s16 sampleValue = 0;
-        // s16 sampleValue = ( s16 ) ( sineValue * toneVolume );
+        // s16 sampleValue = 0;
+        s16 sampleValue = ( s16 ) ( sineValue * toneVolume );
         *sampleOut++ = sampleValue;
         *sampleOut++ = sampleValue;
     }
@@ -33,25 +33,24 @@ internal void RenderWeirdGradient( Game_Offscreen_Buffer *buffer, int xOffset, i
             u8 red = ( u8 ) ( x + y + xOffset + yOffset );
             u8 green = ( u8 ) ( y + yOffset );
             u8 blue = ( u8 ) ( y + xOffset );
-            *pixel++ = 0 | red << 16 | green << 8 | blue;
+            *pixel++ = 0 | red | green << 16 | blue;
         }
         row += buffer->pitch;
     }
 }
 
-internal void RenderPlayer( Game_Offscreen_Buffer *buffer, Game_State *gameState )
+internal void RenderPlayer( Game_Offscreen_Buffer *buffer, int playerX, int playerY )
 {
-    for ( int x = gameState->playerX; x < gameState->playerX + 50; ++x )
+    for ( int x = playerX; x < playerX + 50; ++x )
     {
         if ( x >= 0 && x < buffer->width )
         {
-            u8 *pixel = ( u8 * ) buffer->memory + x * buffer->bytesPerPixel + gameState->playerY * buffer->pitch;
-            for ( int y = gameState->playerY; y < gameState->playerY + 50; ++y )
+            for ( int y = playerY; y < playerY + 50; ++y )
             {
                 if ( y >= 0 && y < buffer->height )
                 {
+                    u8 *pixel = ( u8 * ) buffer->memory + x * buffer->bytesPerPixel + y * buffer->pitch;
                     *( u32 * ) pixel = 0x0000FF00;
-                    pixel += buffer->pitch;
                 }
             }
         }
@@ -72,11 +71,11 @@ GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
         gameState->playerX = 100;
         gameState->playerY = 100;
         char *filename = __FILE__;
-        Debug_Read_File_Result file = memory->DebugPlatformReadEntireFile( filename );
+        Debug_Read_File_Result file = memory->DebugPlatformReadEntireFile( thread, filename );
         if ( file.content )
         {
-            memory->DebugPlatformWriteEntireFile( "test.out", file.contentSize, file.content );
-            memory->DebugPlatformFreeFileMemory( file.content );
+            memory->DebugPlatformWriteEntireFile( thread, "test.out", file.contentSize, file.content );
+            memory->DebugPlatformFreeFileMemory( thread, file.content );
         }
 
         memory->isInitialized = true;
@@ -113,7 +112,15 @@ GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
         if ( gameState->playerX + 50 >= buffer->width ) { gameState->playerX = buffer->width - 1 - 50; }
     }
     RenderWeirdGradient( buffer, gameState->xOffset, gameState->yOffset );
-    RenderPlayer( buffer, gameState );
+    RenderPlayer( buffer, gameState->playerX, gameState->playerY );
+    RenderPlayer( buffer, input->mouseX, input->mouseY );
+    for ( int buttonIndex = 0; buttonIndex < ArrayCount( input->mouseButtons ); ++buttonIndex )
+    {
+        if ( input->mouseButtons[ buttonIndex ].endedDown )
+        {
+            RenderPlayer( buffer, 100 + 100 * buttonIndex, 300 );
+        }
+    }
 }
 
 extern "C" __declspec( dllexport )

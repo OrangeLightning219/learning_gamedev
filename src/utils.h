@@ -42,4 +42,28 @@ inline u32 SafeTruncateU64( u64 value )
     Assert( value <= 0xFFFFFFFF );
     return ( u32 ) value;
 }
+
+internal void ConcatenateStrings( char *sourceA, int countA, char *sourceB, int countB,
+                                  char *destination, int destinationCount )
+{
+    for ( int index = 0; index < countA; ++index )
+    {
+        *destination++ = *sourceA++;
+    }
+    for ( int index = 0; index < countB; ++index )
+    {
+        *destination++ = *sourceB++;
+    }
+    *destination++ = '\0';
+}
+
+internal int StringLength( char *string )
+{
+    int length = 0;
+    while ( *string++ )
+    {
+        ++length;
+    }
+    return length;
+}
 #endif

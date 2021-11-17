@@ -63,6 +63,10 @@ struct Game_Controller_Input
 
 struct Game_Input
 {
+    Game_Button_State mouseButtons[ 5 ];
+    s32 mouseX;
+    s32 mouseY;
+    s32 mouseZ;
     Game_Controller_Input controllers[ 5 ];
 };
 
@@ -72,6 +76,11 @@ inline Game_Controller_Input *getController( Game_Input *input, int controllerIn
     return &input->controllers[ controllerIndex ];
 }
 
+struct Thread_Context
+{
+    int placeholder;
+};
+
 // services from the platform layer
 #ifdef INTERNAL
 struct Debug_Read_File_Result
@@ -80,13 +89,13 @@ struct Debug_Read_File_Result
     void *content;
 };
 
-    #define DEBUG_PLATFORM_READ_ENTIRE_FILE( name ) Debug_Read_File_Result name( char *filename )
+    #define DEBUG_PLATFORM_READ_ENTIRE_FILE( name ) Debug_Read_File_Result name( Thread_Context *thread, char *filename )
 typedef DEBUG_PLATFORM_READ_ENTIRE_FILE( debug_platform_read_entire_file );
 
-    #define DEBUG_PLATFORM_FREE_FILE_MEMORY( name ) void name( void *fileMemory )
+    #define DEBUG_PLATFORM_FREE_FILE_MEMORY( name ) void name( Thread_Context *thread, void *fileMemory )
 typedef DEBUG_PLATFORM_FREE_FILE_MEMORY( debug_platform_free_file_memory );
 
-    #define DEBUG_PLATFORM_WRITE_ENTIRE_FILE( name ) bool name( char *filename, u32 memorySize, void *memory )
+    #define DEBUG_PLATFORM_WRITE_ENTIRE_FILE( name ) bool name( Thread_Context *thread, char *filename, u32 memorySize, void *memory )
 typedef DEBUG_PLATFORM_WRITE_ENTIRE_FILE( debug_platform_write_entire_file );
 
 #endif
@@ -106,13 +115,11 @@ struct Game_Memory
 };
 
 // services for the platform layer
-#define GAME_UPDATE_AND_RENDER( name ) void name( Game_Memory *memory, Game_Input *input, Game_Offscreen_Buffer *buffer )
+#define GAME_UPDATE_AND_RENDER( name ) void name( Thread_Context *thread, Game_Memory *memory, Game_Input *input, Game_Offscreen_Buffer *buffer )
 typedef GAME_UPDATE_AND_RENDER( game_update_and_render );
-GAME_UPDATE_AND_RENDER( GameUpdateAndRenderStub ) { } //NOLINT
 
-#define GAME_GET_SOUND_SAMPLES( name ) void name( Game_Memory *memory, Game_Sound_Output_Buffer *soundBuffer )
+#define GAME_GET_SOUND_SAMPLES( name ) void name( Thread_Context *thread, Game_Memory *memory, Game_Sound_Output_Buffer *soundBuffer )
 typedef GAME_GET_SOUND_SAMPLES( game_get_sound_samples );
-GAME_GET_SOUND_SAMPLES( GameGetSoundSamplesStub ) { } //NOLINT
 
 // -------------------------------------
 struct Game_State

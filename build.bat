@@ -2,7 +2,7 @@
 if not exist build mkdir build
 
 set compiler_args=^
--MT ^
+-MTd ^
 -nologo ^
 -GR- ^
 -EHa- ^
