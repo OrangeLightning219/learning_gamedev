@@ -232,8 +232,14 @@ internal void Win32ResizeDIBSection( Win32_Offscreen_Buffer *buffer, int width, 
 internal void Win32DisplayBufferInWindow( HDC deviceContext, int windowWidth, int windowHeight,
                                           Win32_Offscreen_Buffer *buffer )
 {
+    int offsetX = 10;
+    int offsetY = 10;
+    PatBlt( deviceContext, 0, 0, windowWidth, offsetY, BLACKNESS );
+    PatBlt( deviceContext, 0, 0, offsetX, windowHeight, BLACKNESS );
+    PatBlt( deviceContext, offsetX + buffer->width, 0, windowWidth - buffer->width - offsetX, windowHeight, BLACKNESS );
+    PatBlt( deviceContext, 0, offsetY + buffer->height, windowWidth, windowHeight - buffer->height - offsetY, BLACKNESS );
     StretchDIBits( deviceContext,
-                   0, 0, buffer->width, buffer->height,
+                   10, 10, buffer->width, buffer->height,
                    0, 0, buffer->width, buffer->height,
                    buffer->memory, &buffer->info,
                    DIB_RGB_COLORS, SRCCOPY );
@@ -514,9 +520,6 @@ internal void Win32BeginRecordingInput( Win32_State *state, int inputRecordingIn
     char filename[ MAX_PATH ];
     Win32GetInputRecordingFileLocation( state, true, inputRecordingIndex, filename, sizeof( filename ) );
     state->recordingHandle = CreateFile( filename, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0 );
-    // LARGE_INTEGER filePosition;
-    // filePosition.QuadPart = state->totalSize;
-    // SetFilePointerEx( state->recordingHandle, filePosition, 0, FILE_BEGIN );
     CopyMemory( replayBuffer->memoryBlock, state->gameMemoryBlock, state->totalSize );
 }
 
@@ -537,9 +540,6 @@ internal void Win32BeginInputPlayback( Win32_State *state, int inputPlayingIndex
     char filename[ MAX_PATH ];
     Win32GetInputRecordingFileLocation( state, true, inputPlayingIndex, filename, sizeof( filename ) );
     state->playbackHandle = CreateFile( filename, GENERIC_READ, 0, 0, OPEN_EXISTING, 0, 0 );
-    // LARGE_INTEGER filePosition;
-    // filePosition.QuadPart = state->totalSize;
-    // SetFilePointerEx( state->playbackHandle, filePosition, 0, FILE_BEGIN );
     CopyMemory( state->gameMemoryBlock, replayBuffer->memoryBlock, state->totalSize );
 }
 
@@ -724,6 +724,8 @@ int WinMain( HINSTANCE instance,
     //WS_EX_LAYERED - make transparent window
     HWND window = CreateWindowEx( 0, windowClass.lpszClassName, "Isometric Game", WS_OVERLAPPEDWINDOW | WS_VISIBLE,
                                   CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, 0, 0, instance, 0 );
+    // HWND window = CreateWindowEx( 0, windowClass.lpszClassName, "Isometric Game", WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+    //                               450, 250, 1350, 800, 0, 0, instance, 0 );
     if ( window )
     {
         // transparent window
@@ -809,6 +811,7 @@ int WinMain( HINSTANCE instance,
             Win32_Game_Code game = Win32LoadGameCode( sourceGameCodeDLLFullPath, tempGameCodeDLLFullPath );
             while ( globalRunning )
             {
+                newInput->dtForUpdate = targetSecondsPerFrame;
 #ifdef INTERNAL
                 FILETIME newDLLWtiteTime = Win32GetLastWriteTime( sourceGameCodeDLLFullPath );
                 if ( CompareFileTime( &newDLLWtiteTime, &game.dllLastWriteTime ) != 0 )
@@ -1023,13 +1026,6 @@ int WinMain( HINSTANCE instance,
                     marker->outputLocation = byteToLock;
                     marker->outputByteCount = bytesToWrite;
                     marker->expectedFlipPlayCursor = expectedFrameBoundryByte;
-                    // DWORD unwrapedWriteCursor = writeCursor < playCursor ? writeCursor + soundOutput.secondaryBufferSize : writeCursor;
-                    // audioLatencyBytes = unwrapedWriteCursor - playCursor;
-                    // audioLatencySeconds = ( ( float32 ) audioLatencyBytes / ( float32 ) soundOutput.bytesPerSample ) /
-                    //                       ( float32 ) soundOutput.samplesPerSecond;
-                    // char tempBuffer[ 256 ];
-                    // sprintf( tempBuffer, "PC: %lu, BTL: %lu, TC: %lu, BTW: %lu\n", lastPlayCursor, byteToLock, targetCursor, bytesToWrite );
-                    // OutputDebugString( tempBuffer );
 #endif
                     Win32FillSoundBuffer( &soundOutput, byteToLock, bytesToWrite, &soundBuffer );
                 }
@@ -1070,11 +1066,11 @@ int WinMain( HINSTANCE instance,
                 LARGE_INTEGER endCounter = Win32GetWallClock();
                 lastCounter = endCounter;
 
-                Win32_Window_Dimensions dimensions = Win32GetWindowDimensions( window );
 #ifdef INTERNAL
                 // Win32DebugSyncDisplay( &globalBackbuffer, ArrayCount( debugTimeMarkers ),
                 // debugTimeMarkers, debugTimeMarkerIndex - 1, &soundOutput );
 #endif
+                Win32_Window_Dimensions dimensions = Win32GetWindowDimensions( window );
                 HDC deviceContext = GetDC( window );
                 Win32DisplayBufferInWindow( deviceContext, dimensions.width, dimensions.height,
                                             &globalBackbuffer );

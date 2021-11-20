@@ -3,7 +3,6 @@
 #ifndef UNITY_BUILD
 #endif
 
-#include <math.h>
 #include "utils.h"
 
 struct Game_Sound_Output_Buffer
@@ -67,6 +66,9 @@ struct Game_Input
     s32 mouseX;
     s32 mouseY;
     s32 mouseZ;
+
+    float32 dtForUpdate;
+
     Game_Controller_Input controllers[ 5 ];
 };
 
@@ -124,13 +126,26 @@ typedef GAME_GET_SOUND_SAMPLES( game_get_sound_samples );
 // -------------------------------------
 struct Game_State
 {
-    int xOffset;
-    int yOffset;
-    int toneHz;
-    float32 tSine;
-
-    int playerX;
-    int playerY;
+    float32 playerX;
+    float32 playerY;
 };
 
+struct Tilemap
+{
+    s32 countX;
+    s32 countY;
+    float32 positionX;
+    float32 positionY;
+    float32 tileWidth;
+    float32 tileHeight;
+
+    u32 *tiles;
+};
+
+struct World
+{
+    s32 countX;
+    s32 countY;
+    Tilemap *tilemaps;
+};
 #endif
