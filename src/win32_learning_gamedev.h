@@ -1,10 +1,10 @@
-#ifndef WIN32_ISOMETRIC_GAME_H
-#define WIN32_ISOMETRIC_GAME_H
+#ifndef WIN32_LEARNING_GAMEDEV_H
+#define WIN32_LEARNING_GAMEDEV_H
 
 #ifndef UNITY_BUILD
 #endif
 
-#include "isometric_game.h"
+#include "learning_gamedev.h"
 #include <windows.h>
 
 struct Win32_Offscreen_Buffer

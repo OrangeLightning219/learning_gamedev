@@ -1,5 +1,5 @@
-#ifndef ISOMETRIC_GAME_H
-#define ISOMETRIC_GAME_H
+#ifndef LEARNING_GAMEDEV_H
+#define LEARNING_GAMEDEV_H
 #ifndef UNITY_BUILD
 #endif
 
@@ -126,19 +126,14 @@ typedef GAME_GET_SOUND_SAMPLES( game_get_sound_samples );
 // -------------------------------------
 struct Game_State
 {
+    s32 playerTilemapX;
+    s32 playerTilemapY;
     float32 playerX;
     float32 playerY;
 };
 
 struct Tilemap
 {
-    s32 countX;
-    s32 countY;
-    float32 positionX;
-    float32 positionY;
-    float32 tileWidth;
-    float32 tileHeight;
-
     u32 *tiles;
 };
 
@@ -146,6 +141,30 @@ struct World
 {
     s32 countX;
     s32 countY;
+    float32 positionX;
+    float32 positionY;
+    float32 tileWidth;
+    float32 tileHeight;
+    s32 tilemapCountX;
+    s32 tilemapCountY;
     Tilemap *tilemaps;
+};
+
+struct Raw_Position
+{
+    s32 tilemapX;
+    s32 tilemapY;
+    float32 x;
+    float32 y;
+};
+
+struct Canonical_Position
+{
+    s32 tilemapX;
+    s32 tilemapY;
+    s32 tileX;
+    s32 tileY;
+    float32 x;
+    float32 y;
 };
 #endif

@@ -1,4 +1,4 @@
-#include "win32_isometric_game.h"
+#include "win32_learning_gamedev.h"
 #include "utils.h"
 #include <malloc.h>
 #include <stdio.h>
@@ -697,9 +697,9 @@ int WinMain( HINSTANCE instance,
     Win32_State state = {};
     Win32GetExeFilename( &state );
     char sourceGameCodeDLLFullPath[ MAX_PATH ];
-    Win32BuildExePathFilename( &state, "isometric_game.dll", sourceGameCodeDLLFullPath, sizeof( sourceGameCodeDLLFullPath ) );
+    Win32BuildExePathFilename( &state, "learning_gamedev.dll", sourceGameCodeDLLFullPath, sizeof( sourceGameCodeDLLFullPath ) );
     char tempGameCodeDLLFullPath[ MAX_PATH ];
-    Win32BuildExePathFilename( &state, "isometric_game_temp.dll", tempGameCodeDLLFullPath, sizeof( tempGameCodeDLLFullPath ) );
+    Win32BuildExePathFilename( &state, "learning_gamedev_temp.dll", tempGameCodeDLLFullPath, sizeof( tempGameCodeDLLFullPath ) );
 
     LARGE_INTEGER globalPerformanceCounterFrequencyResult;
     QueryPerformanceFrequency( &globalPerformanceCounterFrequencyResult );

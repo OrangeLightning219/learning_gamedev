@@ -81,5 +81,9 @@ inline s32 TruncateFloat32ToS32( float32 value )
 {
     return ( s32 ) value;
 }
-
+#include <math.h>
+inline s32 FloorFloat32ToS32( float32 value )
+{
+    return ( s32 ) floorf( value );
+}
 #endif

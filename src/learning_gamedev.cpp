@@ -1,4 +1,4 @@
-#include "isometric_game.h"
+#include "learning_gamedev.h"
 #ifndef UNITY_BUILD
 #endif
 
@@ -43,39 +43,78 @@ internal void DrawRectangle( Game_Offscreen_Buffer *buffer, float32 floatMinX, f
 
 inline Tilemap *GetTileMap( World *world, int x, int y )
 {
-    if ( x >= 0 && x < world->countX && y >= 0 && y < world->countY )
+    if ( x >= 0 && x < world->tilemapCountX && y >= 0 && y < world->tilemapCountY )
     {
-        return &world->tilemaps[ y * world->countX + x ];
+        return &world->tilemaps[ y * world->tilemapCountX + x ];
     }
     return 0;
 }
 
-inline u32 GetTileValue( Tilemap *tilemap, int x, int y )
+inline u32 GetTileValue( World *world, Tilemap *tilemap, int x, int y )
 {
-    return tilemap->tiles[ y * tilemap->countX + x ];
+    Assert( tilemap );
+    Assert( x >= 0 && x < world->countX && y >= 0 && y < world->countY );
+    return tilemap->tiles[ y * world->countX + x ];
 }
 
-internal bool IsTilemapPointEmpty( Tilemap *tilemap, float32 x, float32 y )
+inline bool IsTilemapPointEmpty( World *world, Tilemap *tilemap, s32 x, s32 y )
 {
-    int playerTileX = TruncateFloat32ToS32( ( x - tilemap->positionX ) / tilemap->tileWidth );
-    int playerTileY = TruncateFloat32ToS32( ( y - tilemap->positionY ) / tilemap->tileHeight );
-    bool empty = false;
-    if ( playerTileX >= 0 && playerTileX < tilemap->countX &&
-         playerTileY >= 0 && playerTileY < tilemap->countY )
+    if ( !tilemap )
     {
-        empty = GetTileValue( tilemap, playerTileX, playerTileY ) == 0;
+        return false;
+    }
+    bool empty = false;
+    if ( x >= 0 && x < world->countX && y >= 0 && y < world->countY )
+    {
+        empty = GetTileValue( world, tilemap, x, y ) == 0;
     }
     return empty;
 }
 
-internal bool IsWorldPointEmpty( World *world, s32 tilemapX, s32 tilemapY, float32 x, float32 y )
+inline Canonical_Position GetCanonicalPosition( World *world, Raw_Position position )
 {
-    Tilemap *tilemap = GetTileMap( world, tilemapX, tilemapY );
-    if ( tilemap )
+    Canonical_Position result;
+    float32 x = position.x - world->positionX;
+    float32 y = position.y - world->positionY;
+    result.tileX = FloorFloat32ToS32( x / world->tileWidth );
+    result.tileY = FloorFloat32ToS32( y / world->tileHeight );
+    result.tilemapX = position.tilemapX;
+    result.tilemapY = position.tilemapY;
+
+    result.x = x - result.tileX * world->tileWidth;
+    result.y = y - result.tileY * world->tileHeight;
+
+    if ( result.tileX < 0 )
     {
-        return IsTilemapPointEmpty( tilemap, x, y );
+        result.tileX = world->countX + result.tileX;
+        --result.tilemapX;
     }
-    return false;
+
+    if ( result.tileY < 0 )
+    {
+        result.tileY = world->countY + result.tileY;
+        --result.tilemapY;
+    }
+
+    if ( result.tileX >= world->countX )
+    {
+        result.tileX = result.tileX - world->countX;
+        ++result.tilemapX;
+    }
+
+    if ( result.tileY >= world->countY )
+    {
+        result.tileY = result.tileY - world->countY;
+        ++result.tilemapY;
+    }
+    return result;
+}
+
+internal bool IsWorldPointEmpty( World *world, Raw_Position rawPosition )
+{
+    Canonical_Position position = GetCanonicalPosition( world, rawPosition );
+    Tilemap *tilemap = GetTileMap( world, position.tilemapX, position.tilemapY );
+    return IsTilemapPointEmpty( world, tilemap, position.tileX, position.tileY );
 }
 extern "C" __declspec( dllexport )
 GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
@@ -85,6 +124,8 @@ GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
 
     if ( !memory->isInitialized )
     {
+        gameState->playerTilemapX = 1;
+        gameState->playerTilemapY = 1;
         gameState->playerX = 400.0f;
         gameState->playerY = 400.0f;
         memory->isInitialized = true;
@@ -139,32 +180,28 @@ GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
         { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }
     };
     Tilemap tilemaps[ 2 ][ 2 ] = {};
-    tilemaps[ 0 ][ 0 ].countX = tilemapCountX;
-    tilemaps[ 0 ][ 0 ].countY = tilemapCountY;
-    tilemaps[ 0 ][ 0 ].positionX = 0;
-    tilemaps[ 0 ][ 0 ].positionY = 0;
-    tilemaps[ 0 ][ 0 ].tileHeight = buffer->height / ( float32 ) tilemapCountY;
-    tilemaps[ 0 ][ 0 ].tileWidth = buffer->width / ( float32 ) tilemapCountX;
+    World world = {};
+    world.tilemapCountX = 2;
+    world.tilemapCountY = 2;
+    world.tilemaps = ( Tilemap * ) tilemaps;
+    world.countX = tilemapCountX;
+    world.countY = tilemapCountY;
+    world.positionX = 0.0f;
+    world.positionY = 0.0f;
+    world.tileHeight = buffer->height / ( float32 ) tilemapCountY;
+    world.tileWidth = buffer->width / ( float32 ) tilemapCountX;
+
     tilemaps[ 0 ][ 0 ].tiles = ( u32 * ) tiles00;
-
-    tilemaps[ 0 ][ 1 ] = tilemaps[ 0 ][ 0 ];
     tilemaps[ 0 ][ 1 ].tiles = ( u32 * ) tiles01;
-
-    tilemaps[ 1 ][ 0 ] = tilemaps[ 0 ][ 0 ];
     tilemaps[ 1 ][ 0 ].tiles = ( u32 * ) tiles10;
-
-    tilemaps[ 1 ][ 1 ] = tilemaps[ 0 ][ 0 ];
     tilemaps[ 1 ][ 1 ].tiles = ( u32 * ) tiles11;
 
-    World world = {};
-    world.countX = 2;
-    world.countY = 2;
-    world.tilemaps = ( Tilemap * ) tilemaps;
+    float32 playerWidth = 0.75 * world.tileWidth;
+    float32 playerHeight = 0.75 * world.tileHeight;
 
-    float32 playerWidth = 0.75 * tilemaps[ 0 ][ 0 ].tileWidth;
-    float32 playerHeight = 0.75 * tilemaps[ 0 ][ 0 ].tileHeight;
+    Tilemap *tilemap = GetTileMap( &world, gameState->playerTilemapX, gameState->playerTilemapY );
+    Assert( tilemap );
 
-    Tilemap *tilemap = &tilemaps[ 0 ][ 0 ];
     for ( int controllerIndex = 0; controllerIndex < ArrayCount( input->controllers ); ++controllerIndex )
     {
         Game_Controller_Input *controller = getController( input, controllerIndex );
@@ -184,26 +221,32 @@ GAME_UPDATE_AND_RENDER( GameUpdateAndRender )
             float32 newPlayerX = gameState->playerX + dPlayerX * input->dtForUpdate * 200;
             float32 newPlayerY = gameState->playerY + dPlayerY * input->dtForUpdate * 200;
 
-            if ( IsTilemapPointEmpty( tilemap, newPlayerX + 0.5f * playerWidth, newPlayerY ) &&
-                 IsTilemapPointEmpty( tilemap, newPlayerX - 0.5f * playerWidth, newPlayerY ) &&
-                 IsTilemapPointEmpty( tilemap, newPlayerX, newPlayerY ) )
+            Raw_Position playerPosition = { gameState->playerTilemapX, gameState->playerTilemapY, newPlayerX, newPlayerY };
+            Raw_Position playerLeftPosition = { gameState->playerTilemapX, gameState->playerTilemapY, newPlayerX - 0.5f * playerWidth, newPlayerY };
+            Raw_Position playerRightPosition = { gameState->playerTilemapX, gameState->playerTilemapY, newPlayerX + 0.5f * playerWidth, newPlayerY };
+            if ( IsWorldPointEmpty( &world, playerPosition ) &&
+                 IsWorldPointEmpty( &world, playerLeftPosition ) &&
+                 IsWorldPointEmpty( &world, playerRightPosition ) )
             {
-                gameState->playerX = newPlayerX;
-                gameState->playerY = newPlayerY;
+                Canonical_Position canonicalPlayerPosition = GetCanonicalPosition( &world, playerPosition );
+                gameState->playerTilemapX = canonicalPlayerPosition.tilemapX;
+                gameState->playerTilemapY = canonicalPlayerPosition.tilemapY;
+                gameState->playerX = world.positionX + world.tileWidth * canonicalPlayerPosition.tileX + canonicalPlayerPosition.x;
+                gameState->playerY = world.positionY + world.tileHeight * canonicalPlayerPosition.tileY + canonicalPlayerPosition.y;
             }
         }
     }
 
     DrawRectangle( buffer, 0, 0, buffer->width, buffer->height, 1.0f, 0.0f, 1.0f );
-    for ( int row = 0; row < 9; ++row )
+    for ( int row = 0; row < world.countY; ++row )
     {
-        for ( int col = 0; col < 17; ++col )
+        for ( int col = 0; col < world.countX; ++col )
         {
-            float32 gray = GetTileValue( tilemap, col, row ) == 1 ? 1.0f : 0.5f;
-            float32 minX = ( float32 ) col * tilemap->tileWidth;
-            float32 minY = ( float32 ) row * tilemap->tileHeight;
-            float32 maxX = minX + tilemap->tileWidth;
-            float32 maxY = minY + tilemap->tileHeight;
+            float32 gray = GetTileValue( &world, tilemap, col, row ) == 1 ? 1.0f : 0.5f;
+            float32 minX = world.positionX + ( float32 ) col * world.tileWidth;
+            float32 minY = world.positionY + ( float32 ) row * world.tileHeight;
+            float32 maxX = minX + world.tileWidth;
+            float32 maxY = minY + world.tileHeight;
             DrawRectangle( buffer, minX, minY, maxX, maxY, gray, gray, gray );
         }
     }
