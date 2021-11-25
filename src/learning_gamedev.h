@@ -124,14 +124,6 @@ typedef GAME_UPDATE_AND_RENDER( game_update_and_render );
 typedef GAME_GET_SOUND_SAMPLES( game_get_sound_samples );
 
 // -------------------------------------
-struct Game_State
-{
-    s32 playerTilemapX;
-    s32 playerTilemapY;
-    float32 playerX;
-    float32 playerY;
-};
-
 struct Tilemap
 {
     u32 *tiles;
@@ -139,23 +131,17 @@ struct Tilemap
 
 struct World
 {
-    s32 countX;
-    s32 countY;
+    float32 tileSizeInMeters;
+    s32 tileSizeInPixels;
+    float32 metersToPixels;
+
+    s32 tileCountX;
+    s32 tileCountY;
     float32 positionX;
     float32 positionY;
-    float32 tileWidth;
-    float32 tileHeight;
     s32 tilemapCountX;
     s32 tilemapCountY;
     Tilemap *tilemaps;
-};
-
-struct Raw_Position
-{
-    s32 tilemapX;
-    s32 tilemapY;
-    float32 x;
-    float32 y;
 };
 
 struct Canonical_Position
@@ -164,7 +150,14 @@ struct Canonical_Position
     s32 tilemapY;
     s32 tileX;
     s32 tileY;
+    // relative to the tile
     float32 x;
     float32 y;
 };
+
+struct Game_State
+{
+    Canonical_Position playerPosition;
+};
+
 #endif
