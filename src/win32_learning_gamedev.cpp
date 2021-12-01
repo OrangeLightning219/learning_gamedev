@@ -1,5 +1,5 @@
-#include "win32_learning_gamedev.h"
 #include "utils.h"
+#include "win32_learning_gamedev.h"
 #include <malloc.h>
 #include <stdio.h>
 #include <xinput.h>
@@ -114,7 +114,7 @@ DEBUG_PLATFORM_WRITE_ENTIRE_FILE( DebugPlatformWriteEntireFile )
 
 internal void Win32GetExeFilename( Win32_State *state )
 {
-    DWORD filenameSize = GetModuleFileName( 0, state->exePath, sizeof( state->exePath ) );
+    GetModuleFileName( 0, state->exePath, sizeof( state->exePath ) );
     state->exeFilename = state->exePath;
     for ( char *scan = state->exePath; *scan; ++scan )
     {
@@ -127,9 +127,9 @@ internal void Win32GetExeFilename( Win32_State *state )
 
 internal void Win32BuildExePathFilename( Win32_State *state, char *filename, char *destination, int destinationCount )
 {
-    ConcatenateStrings( state->exePath, state->exeFilename - state->exePath,
+    ConcatenateStrings( state->exePath, ( int ) ( state->exeFilename - state->exePath ),
                         filename, StringLength( filename ),
-                        destination, destinationCount );
+                        destination );
 }
 
 inline FILETIME Win32GetLastWriteTime( char *filename )
@@ -741,7 +741,7 @@ int WinMain( HINSTANCE instance,
             monitorRehreshHz = refreshRate;
         }
 
-        float32 gameRefreshHz = monitorRehreshHz; // change this in case the software renderer can't hit 60 fps
+        float32 gameRefreshHz = ( float32 ) monitorRehreshHz; // change this in case the software renderer can't hit 60 fps
         float32 targetSecondsPerFrame = 1.0f / ( float32 ) gameRefreshHz;
 
         Win32_Sound_Output soundOutput = {};
@@ -797,8 +797,6 @@ int WinMain( HINSTANCE instance,
             Win32_Debug_Sound_Marker debugTimeMarkers[ 30 ] = { { 0, 0, 0, 0, 0, 0, 0 } };
 
             bool soundIsValid = false;
-            DWORD audioLatencyBytes = 0;
-            float32 audioLatencySeconds = 0;
 
             LARGE_INTEGER lastCounter = Win32GetWallClock();
             LARGE_INTEGER flipWallClock = Win32GetWallClock();
@@ -1079,14 +1077,14 @@ int WinMain( HINSTANCE instance,
                 flipWallClock = Win32GetWallClock();
 #ifdef INTERNAL
                 {
-                    DWORD playCursor;
-                    DWORD writeCursor;
-                    if ( SUCCEEDED( globalSecondaryBuffer->GetCurrentPosition( &playCursor, &writeCursor ) ) )
+                    DWORD debugPlayCursor;
+                    DWORD debugWriteCursor;
+                    if ( SUCCEEDED( globalSecondaryBuffer->GetCurrentPosition( &debugPlayCursor, &debugWriteCursor ) ) )
                     {
                         Assert( debugTimeMarkerIndex < ArrayCount( debugTimeMarkers ) );
                         Win32_Debug_Sound_Marker *marker = &debugTimeMarkers[ debugTimeMarkerIndex ];
-                        marker->flipPlayCursor = playCursor;
-                        marker->flipWriteCursor = writeCursor;
+                        marker->flipPlayCursor = debugPlayCursor;
+                        marker->flipWriteCursor = debugWriteCursor;
                         // globalSecondaryBuffer->GetCurrentPosition( &marker->playCursor, &marker->writeCursor );
                     }
                     ++debugTimeMarkerIndex;
@@ -1096,7 +1094,7 @@ int WinMain( HINSTANCE instance,
                     }
                 }
 #endif
-                float32 fps = 1.0f / secondsElapsedForFrame;
+                // float32 fps = 1.0f / secondsElapsedForFrame;
                 // char tempBuffer[ 256 ];
                 // sprintf( tempBuffer, "FPS: %f\n", fps );
                 // OutputDebugString( tempBuffer );
@@ -1107,7 +1105,7 @@ int WinMain( HINSTANCE instance,
                 oldInput = temp;
 
                 u64 endCycleCount = __rdtsc();
-                u64 cyclesElapsed = endCycleCount - lastCycleCount;
+                // u64 cyclesElapsed = endCycleCount - lastCycleCount;
                 lastCycleCount = endCycleCount;
             }
         }

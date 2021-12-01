@@ -1,9 +1,11 @@
 #ifndef LEARNING_GAMEDEV_H
 #define LEARNING_GAMEDEV_H
+
 #ifndef UNITY_BUILD
+    #include "utils.h"
 #endif
 
-#include "utils.h"
+#include "tilemap.h"
 
 struct Game_Sound_Output_Buffer
 {
@@ -124,40 +126,24 @@ typedef GAME_UPDATE_AND_RENDER( game_update_and_render );
 typedef GAME_GET_SOUND_SAMPLES( game_get_sound_samples );
 
 // -------------------------------------
-struct Tilemap
+
+struct Memory_Arena
 {
-    u32 *tiles;
+    memory_index size;
+    u8 *base;
+    memory_index used;
 };
 
 struct World
 {
-    float32 tileSizeInMeters;
-    s32 tileSizeInPixels;
-    float32 metersToPixels;
-
-    s32 tileCountX;
-    s32 tileCountY;
-    float32 positionX;
-    float32 positionY;
-    s32 tilemapCountX;
-    s32 tilemapCountY;
-    Tilemap *tilemaps;
-};
-
-struct Canonical_Position
-{
-    s32 tilemapX;
-    s32 tilemapY;
-    s32 tileX;
-    s32 tileY;
-    // relative to the tile
-    float32 x;
-    float32 y;
+    Tilemap *tilemap;
 };
 
 struct Game_State
 {
-    Canonical_Position playerPosition;
+    Memory_Arena worldArena;
+    World *world;
+    Tilemap_Position playerPosition;
 };
 
 #endif

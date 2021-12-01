@@ -19,6 +19,8 @@ typedef uint64_t u64;
 typedef float float32;
 typedef double float64;
 
+typedef size_t memory_index;
+
 #if SLOW
     #define Assert( expression )    \
         if ( !( expression ) )      \
@@ -43,8 +45,8 @@ inline u32 SafeTruncateU64( u64 value )
     return ( u32 ) value;
 }
 
-internal void ConcatenateStrings( char *sourceA, int countA, char *sourceB, int countB,
-                                  char *destination, int destinationCount )
+void ConcatenateStrings( char *sourceA, int countA, char *sourceB, int countB, //NOLINT
+                         char *destination )
 {
     for ( int index = 0; index < countA; ++index )
     {
@@ -57,7 +59,7 @@ internal void ConcatenateStrings( char *sourceA, int countA, char *sourceB, int 
     *destination++ = '\0';
 }
 
-internal int StringLength( char *string )
+int StringLength( char *string ) //NOLINT
 {
     int length = 0;
     while ( *string++ )

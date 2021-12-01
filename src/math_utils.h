@@ -8,12 +8,12 @@
 
 inline s32 RoundFloat32ToS32( float32 value )
 {
-    return ( s32 ) ( value + 0.5f );
+    return ( s32 ) roundf( value );
 }
 
 inline u32 RoundFloat32ToU32( float32 value )
 {
-    return ( u32 ) ( value + 0.5f );
+    return ( u32 ) roundf( value );
 }
 
 inline s32 TruncateFloat32ToS32( float32 value )
