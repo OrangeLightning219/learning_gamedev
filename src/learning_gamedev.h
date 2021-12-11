@@ -134,6 +134,16 @@ struct Memory_Arena
     memory_index used;
 };
 
+#define PushStruct( arena, type )       ( type * ) _PushSize( arena, sizeof( type ) )
+#define PushArray( arena, count, type ) ( type * ) _PushSize( arena, count * sizeof( type ) )
+internal void *_PushSize( Memory_Arena *arena, memory_index size )
+{
+    Assert( arena->used + size <= arena->size );
+    void *result = arena->base + arena->used;
+    arena->used += size;
+    return result;
+}
+
 struct World
 {
     Tilemap *tilemap;
@@ -144,6 +154,7 @@ struct Game_State
     Memory_Arena worldArena;
     World *world;
     Tilemap_Position playerPosition;
+    u32 *pixelPointer;
 };
 
 #endif

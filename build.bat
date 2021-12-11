@@ -14,7 +14,8 @@ set compiler_args=^
 -diagnostics:caret ^
 -wd4201 ^
 -wd4100 ^
--wd4505
+-wd4505 ^
+-wd4189
 
 set linker_args=user32.lib gdi32.lib winmm.lib
 set dll_pdb_file=learning_gamedev_%date:~-4,4%%date:~-10,2%%date:~-7,2%_%time:~0,2%%time:~3,2%%time:~6,2%.pdb
